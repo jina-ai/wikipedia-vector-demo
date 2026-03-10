@@ -94,6 +94,10 @@ class WikipediaIndexer extends AsyncService {
 
 const instance = container.resolve(WikipediaIndexer);
 
+process.on('unhandledRejection', (reason) => {
+    instance.logger.error('Unhandled Rejection at:', { reason });
+});
+
 instance.main().catch(err => {
     console.error('Error in main:', err);
     process.exit(1);
