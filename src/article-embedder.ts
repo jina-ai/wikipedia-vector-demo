@@ -106,6 +106,16 @@ export class ArticleEmbedder extends AsyncService {
     }
 
     async processWikimediaArticle(article: WikimediaArticle) {
+        const docId = `${article.is_part_of.identifier}-${article.identifier}`;
+        const docExists = await this.esClient.exists({
+            index: this.esIndexName,
+            id: docId,
+        });
+
+        if (docExists) {
+            return { id: docId, result: 'noop' };
+        }
+
         const read = await this.readerAPI.htmlToMarkdown(article.article_body.html, article.url);
 
         const chunkedBody = recursiveChunk(read.content)
@@ -162,7 +172,7 @@ export class ArticleEmbedder extends AsyncService {
 
         const r = await this.esClient.index({
             index: this.esIndexName,
-            id: `${doc.partOf}-${article.identifier}`,
+            id: docId,
             document: doc,
         });
 
