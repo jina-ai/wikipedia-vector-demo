@@ -15,9 +15,9 @@ export class ElasticSearchAPI extends HTTPService {
         this.baseOptions.timeout = 180_000;
         this.baseOptions.dispatcher = new RetryAgent(new Agent(), {
             statusCodes: [429, 503, 500],
-            maxRetries: 60,
+            maxRetries: 180,
             retryAfter: true,
-            minTimeout: 500,
+            minTimeout: 1000,
         }) as any;
     }
 
