@@ -9,6 +9,7 @@ import es from '@elastic/elasticsearch';
 import path from 'path';
 
 import type Transformers from '@huggingface/transformers' with {'resolution-mode': 'import'};
+import { ElasticSearchAPI } from './es-alternative-client';
 
 interface WikimediaArticle {
     name: string;
@@ -90,6 +91,7 @@ export class ArticleEmbedder extends AsyncService {
     readerAPI!: JinaReaderAPI;
     embeddingsAPI!: JinaEmbeddingsAPI;
     esClient!: es.Client;
+    altEsClient!: ElasticSearchAPI;
 
     transformers!: typeof Transformers;
 
@@ -115,6 +117,8 @@ export class ArticleEmbedder extends AsyncService {
             },
             serverMode: 'serverless',
         });
+        this.altEsClient = new ElasticSearchAPI(this.envConfig.ELASTICSEARCH_URL || 'http://localhost:9200', this.envConfig.ELASTICSEARCH_API_KEY);
+
         await this._prepareEsIndex();
 
         this.tokenizer = await this.transformers.AutoTokenizer.from_pretrained(path.resolve(__dirname, '../je-5s-tokenizer'));
@@ -195,6 +199,13 @@ export class ArticleEmbedder extends AsyncService {
             index: this.esIndexName,
             id: docId,
             document: doc,
+        }).catch((err) => {
+            this.logger.warn(`Error indexing document ${docId}: ${err.message}, retrying with alternative client`);
+
+            return this.altEsClient.postJson(`/${this.esIndexName}/_doc/${docId}`, doc, { responseType: 'json' })
+                .then((r) => {
+                    return r.data;
+                });
         });
 
 

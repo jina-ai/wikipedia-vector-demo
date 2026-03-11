@@ -31,9 +31,9 @@ export class JinaEmbeddingsAPI extends HTTPService {
         this.baseOptions.timeout = 180_000;
         this.baseOptions.dispatcher = new RetryAgent(new Agent(), {
             statusCodes: [429, 503],
-            maxRetries: 120,
+            maxRetries: 60,
             retryAfter: true,
-            minTimeout: 1000,
+            minTimeout: 500,
         }) as any;
     }
 
