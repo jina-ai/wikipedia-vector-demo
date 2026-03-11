@@ -33,7 +33,7 @@ export class JinaEmbeddingsAPI extends HTTPService {
             statusCodes: [429, 503],
             maxRetries: 10,
             retryAfter: true,
-            minTimeout: 100,
+            minTimeout: 500,
         }) as any;
     }
 
