@@ -6,6 +6,7 @@ import { recursiveChunk } from './chunking';
 import { JinaEmbeddingsAPI } from './jina-embeddings';
 import { EnvConfig } from './env-config';
 import es from '@elastic/elasticsearch';
+import path from 'path';
 
 import type Transformers from '@huggingface/transformers' with {'resolution-mode': 'import'};
 
@@ -70,6 +71,18 @@ interface WikimediaArticle {
     };
 }
 
+// Define patterns in order of hierarchy
+const markdownChunkingPatterns = [
+    /\n(?=# )/g,         // H1
+    /\n(?=## )/g,        // H2
+    /\n(?=### )/g,       // H3
+    /\n(?=#### )/g,      // H4
+    /\n(?=##### )/g,     // H5
+    /\n(?=###### )/g,    // H6
+    /\n{2,}/g,            // Paragraphs
+];
+
+
 @singleton()
 export class ArticleEmbedder extends AsyncService {
 
@@ -81,6 +94,7 @@ export class ArticleEmbedder extends AsyncService {
     transformers!: typeof Transformers;
 
     esIndexName = 'wikipedia-articles';
+    tokenizer!: Transformers.Qwen2Tokenizer;
 
     constructor(
         protected globalLogger: GlobalLogger,
@@ -91,7 +105,7 @@ export class ArticleEmbedder extends AsyncService {
 
     override async init() {
         await this.dependencyReady();
-        this.readerAPI = new JinaReaderAPI(this.envConfig.JINA_API_KEY, this.envConfig.JINA_READER_API_URL || 'http://localhost:3001');
+        this.readerAPI = new JinaReaderAPI(this.envConfig.JINA_API_KEY, this.envConfig.JINA_READER_API_URL);
         this.embeddingsAPI = new JinaEmbeddingsAPI(this.envConfig.JINA_API_KEY);
         this.transformers = await import('@huggingface/transformers');
         this.esClient = new es.Client({
@@ -102,6 +116,9 @@ export class ArticleEmbedder extends AsyncService {
             serverMode: 'serverless',
         });
         await this._prepareEsIndex();
+
+        this.tokenizer = await this.transformers.AutoTokenizer.from_pretrained(path.resolve(__dirname, '../je-5s-tokenizer'));
+
         this.emit('ready');
     }
 
@@ -289,4 +306,40 @@ export class ArticleEmbedder extends AsyncService {
             });
         }
     }
+
+    tokenLength(text: string) {
+        return this.tokenizer.encode(text).length;
+    }
+
+    tokenTrim(text: string, maxTokens: number) {
+        return this.tokenizer.decode(this.tokenizer.encode(text.trim()).slice(0, maxTokens));
+    }
+
+    recursiveChunk(text: string, patterns: RegExp[] = markdownChunkingPatterns, stack: string[] = []): string[] {
+        const prefix = stack.length ? stack.join('\n') + '\n' : '';
+
+        const origChunk = `${prefix}${text}`;
+        if (patterns.length === 0) {
+            return [this.tokenTrim(origChunk, 8100)];
+        }
+
+        if (this.tokenLength(origChunk) <= 8100) {
+            return [origChunk.trim()];
+        }
+
+        const [currentPattern, ...remainingPatterns] = patterns;
+
+        // Split using the current level's pattern
+        const parts = text.split(currentPattern);
+
+        if (remainingPatterns.length === 0 || parts.length === 1 || this.tokenLength(parts[0]) > 512) {
+            return parts.filter(part => part.trim()).flatMap((part) => this.recursiveChunk(part, remainingPatterns, stack));
+        }
+
+        const [firstPart, ...restParts] = parts.filter(part => part.trim());
+
+        // For every part found, try splitting it by the next pattern in the list
+        return restParts.flatMap((part) => this.recursiveChunk(part, remainingPatterns, [...stack, firstPart]));
+    }
+
 }

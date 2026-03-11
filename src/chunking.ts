@@ -13,10 +13,6 @@ export const markdownChunkingPatterns = [
 export function recursiveChunk(text: string, patterns: RegExp[] = markdownChunkingPatterns, stack: string[] = []): string[] {
     const prefix = stack.length ? stack.join('\n') : '';
 
-    if (stack.length) {
-        debugger;
-    }
-
     if (patterns.length === 0) {
         return [`${prefix}${text}`.trim()];
     }
