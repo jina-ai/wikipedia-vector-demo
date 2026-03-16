@@ -1,7 +1,7 @@
 {
   "name": "fe",
   "version": "0.0.1",
-  "description": "A Quasar Project",
+  "description": "Demonstrating jina models and semantic search with ElasticSearch",
   "productName": "Wikipedia Vector Search",
   "author": "Yanlong Wang <yanlong.wang@elastic.co>",
   "type": "module",
