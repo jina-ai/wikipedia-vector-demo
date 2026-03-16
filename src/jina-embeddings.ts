@@ -16,6 +16,15 @@ export interface JinaEmbeddingsResponse<T extends number[] | string = number[]> 
     }[];
 }
 
+export interface JinaReRankResponse {
+    model: string;
+    object: string;
+    usage: {
+        total_tokens: number;
+    };
+    results: { index: number; relevance_score: number; }[];
+}
+
 
 export class JinaEmbeddingsAPI extends HTTPService {
 
@@ -51,5 +60,19 @@ export class JinaEmbeddingsAPI extends HTTPService {
         return r.data;
     }
 
+    @retry(2)
+    async reRankTexts(query: string, texts: string[], model: string) {
+        const r = await this.postJson<JinaReRankResponse>('/v1/rerank', {
+            model,
+            query,
+            top_n: texts.length,
+            documents: texts,
+            max_doc_length: 2048,
+            truncate: true,
+            return_documents: false,
+        });
+
+        return r.data;
+    }
 
 }
