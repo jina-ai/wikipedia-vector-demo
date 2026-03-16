@@ -74,6 +74,9 @@ export class APIHost extends RPCHost {
         hybrid: boolean = false,
         @Param('rerank')
         rerank: boolean = false,
+        @Param('classificationSystem')
+        classificationSystem: 'ddc' | 'udc' = 'ddc',
+
     ) {
         let queryMixin: any = {
             query: {
@@ -134,11 +137,14 @@ export class APIHost extends RPCHost {
             ],
         });
 
-        const pClassifications = this._mixinClassifications(results.hits.hits.map(hit => hit._source as EsIndexedArticle));
+        const pClassifications = this._mixinClassifications(
+            results.hits.hits.map(hit => hit._source as EsIndexedArticle),
+            classificationSystem === 'ddc' ? 'ddc-categories' : 'udc-categories'
+        );
 
         let series = results.hits.hits;
         if (rerank) {
-            const texts = results.hits.hits.map((hit: any) => `${hit._source.name || ''}\n${hit._source.abstract ||''}\n${hit._source.content ||''}`);
+            const texts = results.hits.hits.map((hit: any) => `${hit._source.name || ''}\n${hit._source.abstract || ''}\n${hit._source.content || ''}`);
 
             const reranked = await this.embeddingsAPI.reRankTexts(query, texts, 'jina-reranker-v3');
 
@@ -168,6 +174,8 @@ export class APIHost extends RPCHost {
     async recommend(
         @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64').byteLength === 4096 })
         query: string = '',
+        @Param('classificationSystem')
+        classificationSystem: 'ddc' | 'udc' = 'ddc',
     ) {
         const buff = Buffer.from(query, 'base64');
         const f32Array = new Float32Array(buff.buffer, buff.byteOffset, buff.length / Float32Array.BYTES_PER_ELEMENT);
@@ -186,7 +194,10 @@ export class APIHost extends RPCHost {
             ],
         });
 
-        await this._mixinClassifications(results.hits.hits.map(hit => hit._source as EsIndexedArticle));
+        this._mixinClassifications(
+            results.hits.hits.map(hit => hit._source as EsIndexedArticle),
+            classificationSystem === 'ddc' ? 'ddc-categories' : 'udc-categories'
+        );
 
         const r = results.hits.hits.map((hit) => {
             return {
@@ -208,6 +219,8 @@ export class APIHost extends RPCHost {
     async category(
         @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64').byteLength === 4096 })
         query: string = '',
+        @Param('classificationSystem')
+        classificationSystem: 'ddc' | 'udc' = 'ddc',
     ) {
         const buff = Buffer.from(query, 'base64');
         const f32Array = new Float32Array(buff.buffer, buff.byteOffset, buff.length / Float32Array.BYTES_PER_ELEMENT);
@@ -226,7 +239,10 @@ export class APIHost extends RPCHost {
             ],
         });
 
-        await this._mixinClassifications(results.hits.hits.map(hit => hit._source as EsIndexedArticle));
+        this._mixinClassifications(
+            results.hits.hits.map(hit => hit._source as EsIndexedArticle),
+            classificationSystem === 'ddc' ? 'ddc-categories' : 'udc-categories'
+        );
 
         const r = results.hits.hits.map((hit) => {
             return {
@@ -244,7 +260,7 @@ export class APIHost extends RPCHost {
         return r;
     }
 
-    async _mixinClassifications(docs: EsIndexedArticle[]) {
+    async _mixinClassifications(docs: EsIndexedArticle[], categoryIndex: 'udc-categories' | 'ddc-categories' = 'udc-categories') {
         const ops = docs.flatMap((doc) => {
             const op = {
                 size: 3,
@@ -257,7 +273,7 @@ export class APIHost extends RPCHost {
                 }
             };
 
-            return [{ index: 'udc-categories' }, op];
+            return [{ index: categoryIndex }, op];
         });
 
         const r = await this.esClient.msearch({
@@ -275,7 +291,7 @@ export class APIHost extends RPCHost {
                     vector: Buffer.from(Float32Array.from(hit._source.vector).buffer).toString('base64'),
                 };
             }).filter(Boolean);
-            Reflect.set(docs[idx], 'udcCategories', classifications);
+            Reflect.set(docs[idx], 'dcCategories', classifications);
 
         });
 
@@ -290,7 +306,7 @@ export class APIHost extends RPCHost {
             }
         }
 
-        const r = {...doc};
+        const r = { ...doc };
         Reflect.deleteProperty(r, 'content');
 
         return r as any as EsIndexedArticleDto;

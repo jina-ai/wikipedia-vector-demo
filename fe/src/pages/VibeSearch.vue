@@ -22,6 +22,8 @@
           :label="`Hybrid: ${useHybrid ? 'on' : 'off'}`" />
         <q-fab-action external-label color="cyan" @click.stop.capture="useReranker = !useReranker" icon="auto_mode"
           :label="`Rerank: ${useReranker ? 'on' : 'off'}`" />
+        <q-fab-action external-label color="grey" @click.stop.capture="toggleClassificationSystem" icon="book"
+          :label="`Classification: ${classificationSystem}`" />
       </q-fab>
     </q-page-sticky>
 
@@ -40,11 +42,15 @@ const fabOpen = ref(false);
 const retrievalIndex = ref('disk_bbq');
 const useHybrid = ref(false);
 const useReranker = ref(false);
+const classificationSystem = ref('ddc');
 const navigationBar = ref('');
 const searchQuery = ref('');
 
 const toggleIndex = () => {
   retrievalIndex.value = retrievalIndex.value === 'disk_bbq' ? 'hnsw_int8' : 'disk_bbq';
+};
+const toggleClassificationSystem = () => {
+  classificationSystem.value = classificationSystem.value === 'ddc' ? 'udc' : 'ddc';
 };
 
 const fabPos = ref([128, 128]);
@@ -160,7 +166,7 @@ const isLoading = ref(false);
 
 const SERVER = process.env.DEBUGGING ? 'http://localhost:3001' : ''; // Replace with your actual server URL
 
-const udcCategoriesMap = new Map();
+const dcCategoriesMap = new Map();
 const urlItemMap = new Map();
 
 async function doSearch(query: string) {
@@ -176,17 +182,17 @@ async function doSearch(query: string) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query, index: retrievalIndex.value, hybrid: useHybrid.value, rerank: useReranker.value })
+      body: JSON.stringify({ query, index: retrievalIndex.value, hybrid: useHybrid.value, rerank: useReranker.value, classificationSystem: classificationSystem.value })
     });
 
     const d = await r.json();
     urlItemMap.clear();
     results.value = d.data.map((x: any) => {
       const tags = [];
-      if (x.udcCategories?.length) {
-        for (const c of x.udcCategories) {
+      if (x.dcCategories?.length) {
+        for (const c of x.dcCategories) {
           const key = `${c.identifier}: ${c.name}`;
-          udcCategoriesMap.set(key, c);
+          dcCategoriesMap.set(key, c);
           tags.push(key);
         }
       }
@@ -231,7 +237,7 @@ async function doRecommend(vector: string) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query: vector })
+      body: JSON.stringify({ query: vector, classificationSystem: classificationSystem.value })
     });
 
     const d = await r.json();
@@ -239,9 +245,9 @@ async function doRecommend(vector: string) {
 
     results.value = d.data.map((x: any) => {
       const tags = [];
-      if (x.udcCategories?.length) {
-        for (const c of x.udcCategories) {
-          udcCategoriesMap.set(c.identifier, c);
+      if (x.dcCategories?.length) {
+        for (const c of x.dcCategories) {
+          dcCategoriesMap.set(c.identifier, c);
           tags.push(`${c.identifier}: ${c.name}`);
         }
       }
@@ -284,7 +290,7 @@ async function doCategory(vector: string) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query: vector })
+      body: JSON.stringify({ query: vector, classificationSystem: classificationSystem.value })
     });
 
     const d = await r.json();
@@ -292,9 +298,9 @@ async function doCategory(vector: string) {
 
     results.value = d.data?.map((x: any) => {
       const tags = [];
-      if (x.udcCategories?.length) {
-        for (const c of x.udcCategories) {
-          udcCategoriesMap.set(c.identifier, c);
+      if (x.dcCategories?.length) {
+        for (const c of x.dcCategories) {
+          dcCategoriesMap.set(c.identifier, c);
           tags.push(`${c.identifier}: ${c.name}`);
         }
       }
@@ -350,7 +356,7 @@ function onDoNavigateEvent(ref: SearchResult, tag?: string) {
     return;
   }
 
-  const ctg = udcCategoriesMap.get(tag);
+  const ctg = dcCategoriesMap.get(tag);
   if (!ctg) {
     return;
   }
