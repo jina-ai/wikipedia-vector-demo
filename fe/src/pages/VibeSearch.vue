@@ -1,8 +1,10 @@
 <template>
   <q-page>
     <div class="row justify-center items-center" style="padding-top: 80px">
-      <PseudoBrowser :results="results" :isLoading="isLoading" @doSearch="onDoSearchEvent"
-        @doNavigate="onDoNavigateEvent" :totalResults="totalCount" :searchTime="searchTime" :href="navigationBar">
+      <PseudoBrowser :results="results" :isLoading="isLoading" @doSearch="onDoSearchEvent" :query="searchQuery"
+        @doBack="goBack" @doForward="goForward" @doRefresh="doRandomSearch"
+        @clearSearch="onClearSearch" @doNavigate="onDoNavigateEvent" :totalResults="totalCount" :searchTime="searchTime"
+        :href="navigationBar">
 
         <template v-slot:logo>
           <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en-25.svg" alt=""
@@ -31,7 +33,7 @@
 </template>
 <script setup lang="ts">
 import PseudoBrowser, { SearchResult } from 'components/PseudoBrowser.vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 // import {useI18n} from 'vue-i18n';
 // import {useMetaTags} from 'src/composables/useMetaTags';
@@ -83,82 +85,86 @@ const adaptiveSize = computed(() => {
   }
 });
 
-// Mock search results data for fallback
-const mockResults: SearchResult[] = [
-  {
-    'title': 'Jina AI - Neural Search for Everyone',
-    'link': 'https://jina.ai/',
-    'snippet': 'Jina AI is an open-source neural search company. We build the next generation search for unstructured data. Our mission is to enable developers to build AI-powered search applications.',
-    'position': 1,
-    'domain': 'Jina AI',
-    tags: ['AI', 'Search', 'Open Source']
-  },
-  {
-    'title': 'jina-ai · GitHub',
-    'link': 'https://github.com/jina-ai',
-    'snippet': 'jina-ai has 38 repositories available. Follow their code on GitHub.',
-    'position': 2,
-    'domain': 'GitHub'
-  },
-  {
-    'title': 'Jina - Wikipedia',
-    'link': 'https://en.wikipedia.org/wiki/Jina',
-    'snippet': "I'm sorry, but there is no Wikipedia article about \"Jina AI\". Perhaps you meant the name \"Jina\" which is a name of Indian origin.",
-    'position': 3,
-    'domain': 'Wikipedia'
-  },
-  {
-    'title': 'Jina AI - Build Neural Search Applications with Python',
-    'link': 'https://www.youtube.com/watch?v=n0h3rS0K5fA',
-    'snippet': 'Jina AI - Build Neural Search Applications with Python. In this video, we will build a neural search application with Jina AI.',
-    'position': 4,
-    'domain': 'YouTube'
-  },
-  {
-    'title': 'Jina AI raises $30M to help developers build neural search applications',
-    'link': 'https://venturebeat.com/ai/jina-ai-raises-30m-to-help-developers-build-neural-search-applications/',
-    'snippet': 'Jina AI, a San Francisco-based startup, has raised $30 million in a series B funding round. The round was led by GGV Capital and saw participation from Mango Capital, SAP.iO Fund, and others. Jina AI offers an open-source neural search platform that lets developers build search applications for unstructured data.',
-    'position': 5,
-    'domain': 'VentureBeat'
-  },
-  {
-    'title': 'Jina AI - Crunchbase Company Profile & Funding',
-    'link': 'https://www.crunchbase.com/organization/jina-ai',
-    'snippet': "Jina AI is a San Francisco-based company that offers a neural search platform for developers. The company's platform allows developers to build search applications for unstructured data.",
-    'position': 6,
-    'domain': 'Crunchbase'
-  },
-  {
-    'title': 'Jina AI – Medium',
-    'link': 'https://medium.com/jinaai',
-    'snippet': 'Read writing from Jina AI on Medium. Every day, Jina AI and thousands of other voices read, write, and share important stories on Medium.',
-    'position': 7,
-    'domain': 'Medium'
-  },
-  {
-    'title': 'Jina AI | LinkedIn',
-    'link': 'https://www.linkedin.com/company/jinaai/',
-    'snippet': 'Learn about working at Jina AI. Join LinkedIn today for free. See who you know at Jina AI, leverage your professional network, and get hired.',
-    'position': 8,
-    'domain': 'LinkedIn'
-  },
-  {
-    'title': 'Jina - Product Hunt',
-    'link': 'https://www.producthunt.com/posts/jina',
-    'snippet': 'Jina is a neural search framework that empowers developers to build search applications for unstructured data.',
-    'position': 9,
-    'domain': 'Product Hunt'
-  },
-  {
-    'title': 'Jina AI (@JinaAI_) / Twitter',
-    'link': 'https://twitter.com/JinaAI_?lang=en',
-    'snippet': 'Jina AI (@JinaAI_). We build the next generation search for unstructured data. Open source neural search. San Francisco, CA. jina.ai Joined July 2019.',
-    'position': 10,
-    'domain': 'Twitter'
-  }
+const topCountries = [
+  'United States', 'China', 'Germany', 'India', 'Japan', 'United Kingdom', 'France', 'Italy', 'Russia', 'Canada', 'Brazil', 'Spain', 'Mexico', 'Australia', 'South Korea', 'Turkey', 'Indonesia', 'Netherlands', 'Saudi Arabia', 'Poland', 'Switzerland', 'Taiwan', 'Belgium', 'Ireland', 'Sweden', 'Argentina', 'Israel', 'Singapore', 'Austria', 'United Arab Emirates', 'Thailand', 'Norway', 'Philippines', 'Bangladesh', 'Vietnam', 'Malaysia', 'Denmark', 'Colombia', 'Hong Kong', 'Romania', 'South Africa', 'Czech Republic', 'Pakistan', 'Egypt', 'Iran', 'Portugal', 'Chile', 'Finland', 'Nigeria', 'Peru', 'Kazakhstan', 'Greece', 'Algeria', 'New Zealand', 'Iraq', 'Hungary', 'Cuba', 'Qatar', 'Ukraine', 'Morocco', 'Slovakia', 'Kuwait', 'Uzbekistan',
 ];
 
-const results = ref<SearchResult[]>(mockResults);
+const topicPrompts = [
+  'local bird in',
+  'traditional food in',
+  'popular tourist attractions in',
+  'famous historical events in',
+  'native plants in',
+  'cultural festivals in',
+  'endangered species in',
+  'economics in',
+  'local legends of',
+  'foundations of modern',
+  'absurd events in',
+];
+
+setTimeout(() => {
+  if (window.location.search) {
+    const params = new URLSearchParams(window.location.search);
+    const index = params.get('index');
+    const hybrid = params.get('hybrid') === '1';
+    const rerank = params.get('rerank') === '1';
+    const classificationSystemParam = params.get('classificationSystem');
+
+    const search = params.get('search') || '';
+    if (search) {
+      retrievalIndex.value = index || retrievalIndex.value;
+      useHybrid.value = hybrid;
+      useReranker.value = rerank;
+      classificationSystem.value = classificationSystemParam === 'udc' ? 'udc' : 'ddc';
+      doSearch(search);
+      navigationBar.value = `${getOpts()} Query: ${search}`;
+      searchQuery.value = search;
+      return;
+    }
+    const match = params.get('match') || '';
+    if (match) {
+      retrievalIndex.value = index || retrievalIndex.value;
+      useHybrid.value = hybrid;
+      useReranker.value = rerank;
+      classificationSystem.value = classificationSystemParam === 'udc' ? 'udc' : 'ddc';
+      doMatch(match);
+      navigationBar.value = `${getOpts()} Match: ${match}`;
+      searchQuery.value = '';
+      return;
+    }
+    const classify = params.get('classify') || '';
+    if (classify) {
+      retrievalIndex.value = index || retrievalIndex.value;
+      useHybrid.value = hybrid;
+      useReranker.value = rerank;
+      classificationSystem.value = classificationSystemParam === 'udc' ? 'udc' : 'ddc';
+      doClassify(classify);
+      navigationBar.value = `${getOpts()} Classify: ${classify}`;
+      searchQuery.value = '';
+      return;
+    }
+  }
+  doRandomSearch();
+});
+
+function doRandomSearch() {
+  const randomCountry = topCountries[Math.floor(Math.random() * topCountries.length)] as string;
+  const randomTopic = topicPrompts[Math.floor(Math.random() * topicPrompts.length)] as string;
+  const query = `${randomTopic} ${randomCountry}`;
+  doSearch(query);
+  navigationBar.value = `${getOpts()} Query: ${query}`;
+  searchQuery.value = query;
+}
+
+function goBack() {
+  window.history.back();
+}
+function goForward() {
+  window.history.forward();
+}
+
+const results = ref<SearchResult[]>([]);
 const totalCount = ref(0);
 const searchTime = ref(0);
 
@@ -169,7 +175,88 @@ const SERVER = process.env.DEBUGGING ? 'http://localhost:3001' : ''; // Replace 
 const dcCategoriesMap = new Map();
 const urlItemMap = new Map();
 
-async function doSearch(query: string) {
+let lastState: {
+  query: string;
+  index: string;
+  hybrid: boolean;
+  rerank: boolean;
+  classificationSystem: string;
+  type: 'search' | 'match' | 'classify' | string;
+} | null = null;
+
+function onNewAction(action: string, query: string) {
+  lastState = {
+    query,
+    index: retrievalIndex.value,
+    hybrid: useHybrid.value,
+    rerank: useReranker.value,
+    classificationSystem: classificationSystem.value,
+    type: action,
+  };
+  history.pushState(lastState, '', `?${action}=${encodeURIComponent(query)}&index=${retrievalIndex.value}&hybrid=${useHybrid.value ? '1' : '0'}&rerank=${useReranker.value ? '1' : '0'}&classificationSystem=${classificationSystem.value}`);
+}
+
+function getOpts() {
+  return `[Index: ${retrievalIndex.value}][Hybrid: ${useHybrid.value ? 'Y' : 'N'}][Rerank: ${useReranker.value ? 'Y' : 'N'}]`;
+}
+
+function doRefresh() {
+  if (!lastState) {
+    return;
+  }
+  switch (lastState.type) {
+    case 'search':
+      doSearch(lastState.query, 'popstate');
+      navigationBar.value = `${getOpts()} Query: ${lastState.query}`;
+      break;
+    case 'match':
+      doMatch(lastState.query, 'popstate');
+      navigationBar.value = `${getOpts()} Match: ${lastState.query}`;
+      break;
+    case 'classify':
+      doClassify(lastState.query, 'popstate');
+      navigationBar.value = `${getOpts()} Classify: ${lastState.query}`;
+      break;
+  }
+}
+
+window.addEventListener('popstate', (event: any) => {
+  const state = event.state;
+  console.log('popstate event:', state);
+
+  if (!state.type) {
+    return;
+  }
+
+  retrievalIndex.value = state.index;
+  useHybrid.value = state.hybrid;
+  useReranker.value = state.rerank;
+  classificationSystem.value = state.classificationSystem;
+  lastState = state;
+  doRefresh();
+});
+
+watch([retrievalIndex, useHybrid, useReranker, classificationSystem], () => {
+  doRefresh();
+  if (lastState) {
+
+    lastState = {
+      query: lastState.query,
+      index: retrievalIndex.value,
+      hybrid: useHybrid.value,
+      rerank: useReranker.value,
+      classificationSystem: classificationSystem.value,
+      type: lastState.type,
+    };
+    history.pushState(lastState, '', `?${lastState.type}=${encodeURIComponent(lastState.query)}&index=${retrievalIndex.value}&hybrid=${useHybrid.value ? '1' : '0'}&rerank=${useReranker.value ? '1' : '0'}&classificationSystem=${classificationSystem.value}`);
+  }
+});
+
+function onClearSearch() {
+  history.pushState(lastState, '', `?`);
+}
+
+async function doSearch(query: string, source: string = 'user') {
   if (isLoading.value) {
     return; // Prevent multiple simultaneous searches
   }
@@ -177,6 +264,10 @@ async function doSearch(query: string) {
   // Simulate an API call with a delay
 
   try {
+    searchQuery.value = query;
+    if (source !== 'popstate') {
+      onNewAction('search', query);
+    }
     const r = await fetch(`${SERVER}/textRetrieval`, {
       method: 'POST',
       headers: {
@@ -211,7 +302,6 @@ async function doSearch(query: string) {
     }); // Assuming the API returns results in this format
     totalCount.value = d.meta.total; // Assuming the API returns total count in this format
     searchTime.value = d.meta.took; // Assuming the API returns search time in this format
-    fabOpen.value = true;
   } catch (err) {
     // send notification
     alert(`${err}`);
@@ -223,7 +313,7 @@ async function doSearch(query: string) {
   // For this example, we will just use the mock results
 }
 
-async function doRecommend(vector: string) {
+async function doMatch(vector: string, source: string = 'user') {
   if (isLoading.value) {
     return; // Prevent multiple simultaneous searches
   }
@@ -232,6 +322,9 @@ async function doRecommend(vector: string) {
 
 
   try {
+    if (source !== 'popstate') {
+      onNewAction('match', vector);
+    }
     const r = await fetch(`${SERVER}/recommend`, {
       method: 'POST',
       headers: {
@@ -277,7 +370,7 @@ async function doRecommend(vector: string) {
   // For this example, we will just use the mock results
 }
 
-async function doCategory(vector: string) {
+async function doClassify(vector: string, source: string = 'user') {
   if (isLoading.value) {
     return; // Prevent multiple simultaneous searches
   }
@@ -285,6 +378,9 @@ async function doCategory(vector: string) {
   // Simulate an API call with a delay
 
   try {
+    if (source !== 'popstate') {
+      onNewAction('classify', vector);
+    }
     const r = await fetch(`${SERVER}/category`, {
       method: 'POST',
       headers: {
@@ -337,7 +433,7 @@ function onDoSearchEvent(query: string) {
   }
   doSearch(query);
   searchQuery.value = query;
-  navigationBar.value = `[Index: ${retrievalIndex.value}][Hybrid: ${useHybrid.value ? 'Y' : 'N'}][Rerank: ${useReranker.value ? 'Y' : 'N'}] Query: ${query}`;
+  navigationBar.value = `${getOpts()} Query: ${query}`;
 }
 
 function onDoNavigateEvent(ref: SearchResult, tag?: string) {
@@ -349,8 +445,8 @@ function onDoNavigateEvent(ref: SearchResult, tag?: string) {
     return;
   }
   if (!tag) {
-    doRecommend(item.meanMatching);
-    navigationBar.value = `[Index: ${retrievalIndex.value}][Hybrid: ${useHybrid.value ? 'Y' : 'N'}][Rerank: ${useReranker.value ? 'Y' : 'N'}] Recommend: ${item.name}`;
+    doMatch(item.meanMatching);
+    navigationBar.value = `${getOpts()} Match: ${item.name}`;
     searchQuery.value = '';
 
     return;
@@ -360,8 +456,8 @@ function onDoNavigateEvent(ref: SearchResult, tag?: string) {
   if (!ctg) {
     return;
   }
-  doCategory(ctg.vector);
-  navigationBar.value = `[Index: ${retrievalIndex.value}][Hybrid: ${useHybrid.value ? 'Y' : 'N'}][Rerank: ${useReranker.value ? 'Y' : 'N'}] Category: ${tag}`;
+  doClassify(ctg.vector);
+  navigationBar.value = `${getOpts()} Classify: ${tag}`;
   searchQuery.value = '';
 }
 

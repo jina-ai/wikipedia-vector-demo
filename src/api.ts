@@ -172,12 +172,12 @@ export class APIHost extends RPCHost {
 
     @Method()
     async recommend(
-        @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64').byteLength === 4096 })
+        @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64url').byteLength === 4096 })
         query: string = '',
         @Param('classificationSystem')
         classificationSystem: 'ddc' | 'udc' = 'ddc',
     ) {
-        const buff = Buffer.from(query, 'base64');
+        const buff = Buffer.from(query, 'base64url');
         const f32Array = new Float32Array(buff.buffer, buff.byteOffset, buff.length / Float32Array.BYTES_PER_ELEMENT);
 
         const results = await this.esClient.search({
@@ -194,7 +194,7 @@ export class APIHost extends RPCHost {
             ],
         });
 
-        this._mixinClassifications(
+        await this._mixinClassifications(
             results.hits.hits.map(hit => hit._source as EsIndexedArticle),
             classificationSystem === 'ddc' ? 'ddc-categories' : 'udc-categories'
         );
@@ -217,12 +217,12 @@ export class APIHost extends RPCHost {
 
     @Method()
     async category(
-        @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64').byteLength === 4096 })
+        @Param('query', { required: true, validate: (v: string) => Buffer.from(v, 'base64url').byteLength === 4096 })
         query: string = '',
         @Param('classificationSystem')
         classificationSystem: 'ddc' | 'udc' = 'ddc',
     ) {
-        const buff = Buffer.from(query, 'base64');
+        const buff = Buffer.from(query, 'base64url');
         const f32Array = new Float32Array(buff.buffer, buff.byteOffset, buff.length / Float32Array.BYTES_PER_ELEMENT);
 
         const results = await this.esClient.search({
@@ -239,7 +239,7 @@ export class APIHost extends RPCHost {
             ],
         });
 
-        this._mixinClassifications(
+        await this._mixinClassifications(
             results.hits.hits.map(hit => hit._source as EsIndexedArticle),
             classificationSystem === 'ddc' ? 'ddc-categories' : 'udc-categories'
         );
@@ -302,7 +302,7 @@ export class APIHost extends RPCHost {
         for (const key of ['meanClassification', 'meanMatching'] as const) {
             if (doc[key] && Array.isArray(doc[key])) {
                 // To base64
-                Reflect.set(doc, key, Buffer.from(Float32Array.from(doc[key]).buffer).toString('base64'));
+                Reflect.set(doc, key, Buffer.from(Float32Array.from(doc[key]).buffer).toString('base64url'));
             }
         }
 
@@ -320,7 +320,7 @@ export class APIHost extends RPCHost {
             buff.writeFloatBE(arr[i], i * Float32Array.BYTES_PER_ELEMENT);
         }
 
-        return buff.toString('base64');
+        return buff.toString('base64url');
 
         // return Array.from(tensor.data as Float32Array);
     }

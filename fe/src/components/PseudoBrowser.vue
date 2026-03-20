@@ -12,8 +12,9 @@
       <!-- Safari toolbar with navigation and address bar -->
       <div class="safari-toolbar">
         <div class="navigation-buttons">
-          <q-btn round flat dense icon="arrow_back" color="black" size="sm"/>
-          <q-btn round flat dense icon="arrow_forward" color="black" size="sm"/>
+          <q-btn round flat dense icon="arrow_back" color="black" size="sm" @click="$emit('doBack')"/>
+          <q-btn round flat dense icon="arrow_forward" color="black" size="sm" @click="$emit('doForward')"/>
+          <q-btn round flat dense icon="refresh" color="black" size="sm" @click="$emit('doRefresh')"/>
         </div>
 
         <!-- Address bar with fixed URL -->
@@ -175,7 +176,7 @@ export interface SearchResult {
   domain?: string;
 }
 
-const emit = defineEmits(['doSearch', 'doNavigate']);
+const emit = defineEmits(['doSearch', 'doNavigate', 'clearSearch', 'doBack', 'doForward', 'doRefresh']);
 
 const props = defineProps<{
   isLoading?: boolean;
@@ -196,7 +197,7 @@ const searchInput = ref<HTMLInputElement | null>(null);
 const BASE_URL = 'https://llm-serp.jina.ai';
 
 // Reactive state variables
-const searchQuery = ref(props.query || 'jina ai');
+const searchQuery = ref(props.query);
 const searchResults = ref<SearchResult[]>([]);
 const isLoading = ref(true);
 const resultStats = ref({
@@ -206,11 +207,11 @@ const resultStats = ref({
 const currentPage = ref(1);
 const showFake404 = ref(false);
 
-// watch(props, (newProps) => {
-//   if (newProps.query !== searchQuery.value) {
-//     searchQuery.value = newProps.query || '';
-//   }
-// });
+watch(props, (newProps) => {
+  if (newProps.query !== searchQuery.value) {
+    searchQuery.value = newProps.query || '';
+  }
+});
 
 // Check if the domain should show a 404 error
 const shouldShow404 = (query: string) => {
@@ -245,6 +246,7 @@ const clearSearch = () => {
   if (searchInput.value) {
     searchInput.value.focus();
   }
+  emit('clearSearch');
 };
 
 const getDomainHostname = (url: string) => {
