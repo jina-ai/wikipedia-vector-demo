@@ -6,6 +6,7 @@ import { EnvConfig } from './env-config';
 import { JinaEmbeddingsAPI } from './jina-embeddings';
 import es from '@elastic/elasticsearch';
 import type Transformers from '@huggingface/transformers' with {'resolution-mode': 'import'};
+import path from 'path';
 
 export interface EsIndexedArticle {
     title: string;
@@ -35,6 +36,7 @@ export class APIHost extends RPCHost {
     logger = this.globalLogger.child({ service: this.constructor.name });
 
     transformers!: typeof Transformers;
+    tokenizer!: Transformers.Qwen2Tokenizer;
 
     embeddingsAPI!: JinaEmbeddingsAPI;
     esClient!: es.Client;
@@ -61,7 +63,12 @@ export class APIHost extends RPCHost {
             },
             serverMode: 'serverless',
         });
+        this.tokenizer = await this.transformers.AutoTokenizer.from_pretrained(path.resolve(__dirname, '../je-5s-tokenizer'));
         this.emit('ready');
+    }
+
+    tokenTrim(text: string, maxTokens: number) {
+        return this.tokenizer.decode(this.tokenizer.encode(text.trim()).slice(0, maxTokens));
     }
 
     @Method()
@@ -144,7 +151,7 @@ export class APIHost extends RPCHost {
 
         let series = results.hits.hits;
         if (rerank) {
-            const texts = results.hits.hits.map((hit: any) => `${hit._source.name || ''}\n${hit._source.abstract || ''}\n${hit._source.content || ''}`);
+            const texts = results.hits.hits.map((hit: any) => this.tokenTrim(`${hit._source.name || ''}\n${hit._source.abstract || ''}\n${hit._source.content || ''}`, 2048));
 
             const reranked = await this.embeddingsAPI.reRankTexts(query, texts, 'jina-reranker-v3');
 

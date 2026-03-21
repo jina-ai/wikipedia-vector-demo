@@ -10,6 +10,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+COPY je-5s-tokenizer ./je-5s-tokenizer
 COPY build ./build
 COPY public ./public
 COPY fe/dist ./fe/dist
