@@ -90,7 +90,10 @@ const topCountries = [
 ];
 
 const topicPrompts = [
-  'local bird in',
+  'cultural heritage of',
+  'military history of',
+  'top scholars from',
+  'local birds in',
   'traditional food in',
   'popular tourist attractions in',
   'famous historical events in',
@@ -98,7 +101,6 @@ const topicPrompts = [
   'cultural festivals in',
   'endangered species in',
   'economics in',
-  'local legends of',
   'foundations of modern',
   'absurd events in',
 ];
