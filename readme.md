@@ -7,7 +7,7 @@ This puts our latest embeddings model, `jina-embeddings-v5-text-small` and reran
 The scale of the dataset (7.1M articles, 60Bn tokens, 299GB indexed size) also demonstrates the scalability, performance and efficiency of ElasticSearch as a vector search, and an integrated Search AI solution.
 
 ## Features
-- Semantic search with `semantic_text` (asymmetric retrieval)
+- Semantic search with `semantic_text`, query in all major languages (asymmetric retrieval)
 - Recommendation with dense vector search (text matching)
 - Automatic classification of articles with dense vector search (classification)
 - Reranking of search results with `jina-reranker-v3` (semantic ranking)
