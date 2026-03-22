@@ -114,7 +114,7 @@
         <!-- Search results section -->
         <div class="serp-results-container" v-if="props.results && props.results.length">
           <div class="results-stats" v-if="props.totalResults && props.searchTime">
-            About {{ props.totalResults }} results ({{ props.searchTime }} seconds)
+            About {{ props.totalResults }} results ({{ `${props.searchTime.toFixed(3)}` }} seconds)
           </div>
 
           <div class="result-item" v-for="(result, index) in props.results" :key="index">
