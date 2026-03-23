@@ -32,6 +32,7 @@ A dump of English Wikipedia: ~7.1 million articles, 144GB compressed, 299GB inde
 The Agent Builder can automatically leverage the `semantic_text` field for retrieval and export MCP tools for external use.
 
 ## Using the UI
+![alt text](<screenshot.png>)
 When opened without parameters, the UI generates a random search query from a curated list of topic prompts. Clicking the **Refresh** button generates a new random query. You can also type your own query in the search bar.
 
 **Article title** — opens the corresponding Wikipedia page.
