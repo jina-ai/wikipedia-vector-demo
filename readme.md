@@ -1,59 +1,56 @@
 
-# Wikipedia vector search demo
-Introducing a demo project showcasing Jina models and Elastic semantic/vector search capabilities using Wikipedia article data.
+# Wikipedia Vector Search Demo
 
-This puts our latest embeddings model, `jina-embeddings-v5-text-small` and reranker model `jina-reranker-v3` in action, creating a comprehensive search experience with semantic search, recommendation and classification capabilities.
+A demo project showcasing Jina models and Elasticsearch's semantic/vector search capabilities on a full Wikipedia dataset.
 
-The scale of the dataset (7.1M articles, 60Bn tokens, 299GB indexed size) also demonstrates the scalability, performance and efficiency of ElasticSearch as a vector search, and an integrated Search AI solution.
+This project puts `jina-embeddings-v5-text-small` and `jina-reranker-v3` to work, delivering a comprehensive search experience with semantic search, article recommendation, and zero-shot classification.
+
+The scale of the dataset — 7.1M articles, ~60B tokens, 299GB indexed — also demonstrates the scalability and efficiency of Elasticsearch as a vector search and integrated Search AI solution.
 
 ## Features
-- Semantic search with `semantic_text`, query in all major languages (asymmetric retrieval)
-- Recommendation with dense vector search (text matching)
-- Automatic classification of articles with dense vector search (classification)
-- Reranking of search results with `jina-reranker-v3` (semantic ranking)
+- Multilingual semantic search via `semantic_text` (asymmetric retrieval — query in any major language)
+- Article recommendation via dense vector search (text similarity)
+- Zero-shot article classification via dense vector search
+- Result reranking with `jina-reranker-v3`
 
 ## Dataset
-Dump of English Wikipedia, roughly 7.1 Million articles. 
-
-Raw data 144GB compressed, indexed size 299GB, ~60 Bn tokens.
+A dump of English Wikipedia: ~7.1 million articles, 144GB compressed, 299GB indexed, ~60B tokens.
 
 ## Ingestion
-- Download data dump from Wikipedia enterprise API
-- HTML to Markdown conversion with Jina Reader
-- Recursive chunking of markdown separator group
-- Indexed using `jina-embeddings-v5-text-small`
-- 1 semantic_text field, 6 dense vector fields (mean normalized of all chunk vectors)
+- Download data dump from the Wikipedia Enterprise API
+- Convert HTML to Markdown with Jina Reader
+- Recursively chunk on Markdown separator boundaries
+- Index with `jina-embeddings-v5-text-small`
+- 1 `semantic_text` + `disk_bbq` field + 6 dense vector fields (mean-normalized across all chunk vectors)
 
 ## Search
-- Search with `semantic_text` field for semantic search (asymmetric retrieval)
-- Search with dense vector fields for recommendation and classification (dense vector search)
-- Optional Reranking of search results with `jina-reranker-v3` 
+- `semantic_text` field for semantic search (asymmetric retrieval)
+- Dense vector fields for recommendation and classification
+- Optional reranking with `jina-reranker-v3`
 
 ## Agent Builder
-Agent build can automatically leverage the `semantic_text` field for retrieval. As well as exporting MCP tools for external use.
+The Agent Builder can automatically leverage the `semantic_text` field for retrieval and export MCP tools for external use.
 
 ## Using the UI
-When accessed without parameters, a random search query is generated from a list of topic prompts. 
-Another random query is generated when the "refresh" button is clicked.
-You can also specify your own query in the search bar.
+When opened without parameters, the UI generates a random search query from a curated list of topic prompts. Clicking the **Refresh** button generates a new random query. You can also type your own query in the search bar.
 
-By clicking on the title of an article, you will be navigated to the Wikipedia page.
+**Article title** — opens the corresponding Wikipedia page.
 
-By clicking on the abstract/description of an article, a new text-matching query is run by matching the mean normalized dense vector of the article chunks (text matching optimized). This is useful for finding similar articles, and demonstrates the recommendation capabilities of dense vector search.
+**Article abstract** — runs a text-matching query using the mean-normalized dense vector of the article's chunks. This finds semantically similar articles and demonstrates the recommendation capability.
 
-By clicking on the category tags of an article, a new classification query is run by matching the mean normalized dense vector of the article chunks (classification optimized) against the normalized dense vector of the category labels (0-shot classification). 
+**Category tags** — runs a zero-shot classification query by matching the article's mean-normalized dense vector against the normalized dense vectors of the category labels.
 
-By opening the floating action button, you can toggle several options:
-- Classification system used: Dewey Decimal Classification (ddc) or Universal Decimal Classification (udc)
-- Rerank: Whether to use `jina-reranker-v3` for reranking search results.
-- Hybrid: Whether to combine the relevance score from `semantic_text` with text search on article name / abstract
-- Index: Whether to use the `semantic_text` field for search (disk_bbq), or to use the retrieval optimized mean normalized `dense_vector` field for search (hnsw_int8).
+**Floating action button** — toggles several options:
+- **Classification system**: Dewey Decimal Classification (DDC) or Universal Decimal Classification (UDC)
+- **Rerank**: enable `jina-reranker-v3` for result reranking
+- **Hybrid**: combine the `semantic_text` relevance score with standard text search on article title and abstract
+- **Index**: `semantic_text` field (disk_bbq) or the retrieval-optimized mean-normalized `dense_vector` field (hnsw_int8)
 
+## Similar Projects
 
-## Similar projects or articles
-Providing a semantic search for wikipedia has been a common demo for both model providers and vector databases.
+Semantic search over Wikipedia is a popular demo for model providers and vector databases alike:
 
-- https://lancedb-demos.vercel.app/demo/wikipedia-search `all-MiniLM-L6-v2` + LanceDB, demo site available
-- https://wikipedia-semantic-search.vercel.app/ : `BGE-M3` + Upstash, demo site available
-- https://developers.openai.com/cookbook/examples/embedding_wikipedia_articles_for_search OpenAI `text-embedding-3-small` playbook
-- https://docs.cohere.com/page/wikipedia-search-with-weaviate Example from Cohere
+- https://lancedb-demos.vercel.app/demo/wikipedia-search — `all-MiniLM-L6-v2` + LanceDB
+- https://wikipedia-semantic-search.vercel.app/ — `BGE-M3` + Upstash
+- https://developers.openai.com/cookbook/examples/embedding_wikipedia_articles_for_search — OpenAI `text-embedding-3-small` cookbook
+- https://docs.cohere.com/page/wikipedia-search-with-weaviate — Cohere + Weaviate
