@@ -9,8 +9,8 @@ The scale of the dataset — 7.1M articles, ~60B tokens, 299GB indexed — also 
 
 ## Features
 - Multilingual semantic search via `semantic_text` (asymmetric retrieval — query in any major language)
-- Article recommendation via dense vector search (text similarity)
-- Zero-shot article classification via dense vector search
+- Article recommendation via dense vector search (text matching)
+- Zero-shot article classification via dense vector search (0-shot classification)
 - Result reranking with `jina-reranker-v3`
 
 ## Dataset
