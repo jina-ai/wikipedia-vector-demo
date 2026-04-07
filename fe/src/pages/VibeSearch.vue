@@ -366,7 +366,7 @@ async function doMatch(vector: string, source: string = 'user') {
 
     }); // Assuming the API returns results in this format
     totalCount.value = d.meta.total; // Assuming the API returns total count in this format
-    searchTime.value = d.meta.took; // Assuming the API returns search time in this format
+    searchTime.value = d.meta.took / 1000; // Assuming the API returns search time in this format
 
   } catch (err) {
     // send notification
@@ -422,7 +422,7 @@ async function doClassify(vector: string, source: string = 'user') {
 
     }); // Assuming the API returns results in this format
     totalCount.value = d.meta.total; // Assuming the API returns total count in this format
-    searchTime.value = d.meta.took; // Assuming the API returns search time in this format
+    searchTime.value = d.meta.took / 1000; // Assuming the API returns search time in this format
 
   } catch (err) {
     // send notification
